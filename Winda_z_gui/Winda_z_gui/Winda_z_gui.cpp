@@ -1,18 +1,22 @@
-﻿// Winda_z_gui.cpp : Definiuje punkt wejścia dla aplikacji.
-//
+﻿
 
 #include "framework.h"
 #include "Winda_z_gui.h"
 
 #define MAX_LOADSTRING 100
+#define Timer1 1
 //Stale globalne
 const unsigned int NUMBER_OF_FLOORS = 5;
 const unsigned int ELEVATOR_CAPACITY = 10;
+const unsigned int LIFTING_CAPACITY = 600;
 //charakterystyka windy
 
 const unsigned int MIN_PASSANGER_WEIGHT = 60;
 const unsigned int MAX_PASSANGER_WEIGHT = 80;
 //zakres wagi pasazerow
+int offset = 0;
+int i = 0;
+int timer = 0;
 
 // Zmienne globalne:
 HINSTANCE hInst;                                // bieżące wystąpienie
@@ -23,7 +27,7 @@ WCHAR szWindowClass[MAX_LOADSTRING];            // nazwa klasy okna głównego
 
 
 //handlery przyciskow
-HWND hwndButton;
+HWND hwndButton, hwndText;
 
 // Przekaż dalej deklaracje funkcji dołączone w tym module kodu:
 ATOM                MyRegisterClass(HINSTANCE hInstance);
@@ -37,67 +41,227 @@ private:
     unsigned int start_floor;
     unsigned int end_floor;
     unsigned int weight;
-    bool is_inside;
+    bool isinside;
 public:
-   /* void assign_start_floor(int x)
+    unsigned int get_start()
     {
-        start_floor = x;
+        return start_floor;
     }
-    void assign_end_floor(int x)
+    unsigned int get_end()
     {
-        end_floor = x;
+        return end_floor;
     }
-    void assign_weight() //wartość losowa między 60 a 80
+    bool get_isinside()
     {
-        
-    }*/
-    Human(unsigned int x,unsigned int y)
+        return isinside;
+    }
+    void set_isinside()
+    {
+        isinside = 1;
+    }
+    unsigned int how_heavy()
+    {
+        return weight;
+    }
+
+    Human(unsigned int x, unsigned int y)
     {
         start_floor = x;
         end_floor = y;
         srand(time(NULL));
         weight = MIN_PASSANGER_WEIGHT + rand() % (MAX_PASSANGER_WEIGHT - MIN_PASSANGER_WEIGHT);
-        is_inside = 0;
+        isinside = false;
     }
-    
+    ~Human()
+    {
+        start_floor = NULL;
+        end_floor = NULL;
+        weight = NULL;
+        isinside = NULL;
+    }
 };
 
-class Elevator //: public Human
+class Elevator
 {
 private:
-    
+
     unsigned int curentposition;
+    unsigned int nextposition;
     unsigned int load;
-  //  bool moving; //potrzebne do prawidlowego dzialania animacji (w pozniejszym etapie)
-   //bool direction; //na razie nwm czy potrzebne w razie pauzy zapisywalo by kierunek w ktorym ma sie poruszac platforma (1 - gora, 0 -dol)
-    unsigned int capacity[ELEVATOR_CAPACITY];
+    bool ismoving; 
+    unsigned int capacity;
+
 public:
-    void move_up()
+    unsigned int get_capacity()
     {
-        if (curentposition < NUMBER_OF_FLOORS)
-        {
-            curentposition++;
-        }
+        return capacity;
     }
-    void move_down()
+    void add_capacity()
     {
-        if (curentposition > 0)
-        {
-            curentposition--;
-        }
+        capacity++;
+    }
+    void sub_capacity()
+    {
+        capacity--;
+    }
+    unsigned int get_curentposition()
+    {
+        return curentposition;
+    }
+    unsigned int get_nextposition()
+    {
+        return nextposition;
+    }
+    void set_nextposition(int x)
+    {
+        nextposition = x;
+    }
+    void curentPositionEqual()
+    {
+        curentposition = nextposition;
+    }
+    unsigned int get_load()
+    {
+        return load;
+    }
+    void add_load(unsigned int x)
+    {
+        load = load + x;
+    }
+    void sub_load(unsigned int x)
+    {
+        load = load - x;
+    }
+    void starte()
+    {
+        ismoving =true;
+    }
+    void stope()
+    {
+        ismoving = false;
+    }
+    bool isitmoving()
+    {
+        return ismoving;
     }
     Elevator()
     {
         curentposition = 1;
         load = 0;
-       // moving = 0;
-      //  direction = 1;
+        ismoving = false;
+        capacity = 0;
     }
-    
+
 };
 
-
+Elevator elevator;
 std::vector<Human>qpassengers;
+void serch_vector(std::vector <Human> qpassengers)
+{
+    int vsize = qpassengers.size();
+    int factor = (int)elevator.get_curentposition();
+    std::vector<int> holder;
+    std::vector<unsigned int> bufor;
+    int hp;
+    int anwser = 0;
+    int best_cell = 0;
+    int lowest_value = 11;
+   
+    if (vsize == 0)elevator.set_nextposition(elevator.get_curentposition());
+    else if (elevator.get_capacity() >= ELEVATOR_CAPACITY)
+    {
+        for (int x = 0; x < vsize; x++)
+        {
+
+            if (qpassengers[x].get_isinside() == 1)
+            {
+                bufor.push_back(qpassengers[x].get_end());
+                hp = abs((int)qpassengers[x].get_end() - factor);
+                if (hp == 0)
+                    holder.push_back(10);
+                else
+                    holder.push_back(hp);
+            }
+            else
+                holder.push_back(10);
+        }
+    }
+    else
+    {
+        for (int x = 0; x < vsize; x++)
+        {
+            bufor.push_back(qpassengers[x].get_start());
+            hp = abs((int)qpassengers[x].get_start() - factor);
+            if (hp == 0)
+                holder.push_back(10);
+            else
+                holder.push_back(hp);
+
+            if (qpassengers[x].get_isinside() == 1)
+            {
+                bufor.push_back(qpassengers[x].get_end());
+                hp = abs((int)qpassengers[x].get_end() - factor);
+                if (hp == 0)
+                    holder.push_back(10);
+                else
+                    holder.push_back(hp);
+            }
+        }
+    }
+    int hsize = holder.size();
+
+    for (int x = 0; x < hsize; x++)
+    {
+        if (holder[x] < lowest_value)
+            best_cell = x;
+    }
+    if(vsize !=0)
+    elevator.set_nextposition(bufor[best_cell]);
+}
+
+void beggin()
+{
+    int qsize = qpassengers.size();
+    for (int x=0; x < qsize; x++)
+    {
+        if (qpassengers[x].get_isinside() == 0 and qpassengers[x].get_start() == elevator.get_curentposition() and elevator.get_capacity() < ELEVATOR_CAPACITY and elevator.get_load() < LIFTING_CAPACITY)
+        {
+            qpassengers[x].set_isinside();
+            elevator.add_capacity();
+            elevator.add_load(qpassengers[x].how_heavy());
+        }
+    }
+}
+
+//wysiadanie
+void arrive(std::vector <Human>& qpassengers)
+{
+    int qsize = qpassengers.size();
+    std::vector<int>eraser;
+    for (int x = 0; x <qsize; x++)
+    {
+        if (qpassengers[x].get_isinside() == 1 && qpassengers[x].get_end() == elevator.get_curentposition())
+        {
+            elevator.sub_capacity();
+            elevator.sub_load(qpassengers[x].how_heavy());
+            eraser.push_back(x);
+        }
+    }
+    int esize = eraser.size();
+    if (esize > 0)
+    {
+        for (int x = esize - 1; x >= 0; x--)
+        {
+            qpassengers.erase(qpassengers.begin() + eraser[x]);
+        }
+    }
+}
+void scale(HDC hdc)
+{
+    TCHAR text[256];
+    swprintf_s(text, 256, L"Obciazenie: %d", elevator.get_load());
+    TextOut(hdc, 390, 10, text, wcslen(text));
+}
 
 
 void OnPaint(HDC hdc)
@@ -108,7 +272,8 @@ void OnPaint(HDC hdc)
     Pen pen3(Color(150, 0, 0, 0), 2.0);
     Pen pen4(Color(255, 255, 0, 0),2.0);
     Pen pen5(Color(255, 0, 255, 0), 2.0);
-    //piętra
+
+    //pietra
     graphics.DrawLine(&pen1, 20, 110, 100, 110); //5
     graphics.DrawLine(&pen1, 300, 110, 380, 110);
    
@@ -125,22 +290,24 @@ void OnPaint(HDC hdc)
     graphics.DrawLine(&pen1, 300, 590, 380, 590);
 
     //ludzie
-    graphics.DrawRectangle(&pen4, 100, 560, 20, 30);
-    graphics.DrawRectangle(&pen5, 120, 560, 20, 30);
-    graphics.DrawRectangle(&pen4, 140, 560, 20, 30);
-    graphics.DrawRectangle(&pen5, 160, 560, 20, 30);
-    graphics.DrawRectangle(&pen4, 180, 560, 20, 30);
-    graphics.DrawRectangle(&pen5, 200, 560, 20, 30);
-    graphics.DrawRectangle(&pen4, 220, 560, 20, 30);
-    graphics.DrawRectangle(&pen5, 240, 560, 20, 30);
-    graphics.DrawRectangle(&pen4, 260, 560, 20, 30);
-    graphics.DrawRectangle(&pen5, 280, 560, 20, 30);
+    for(int x = 0; x < elevator.get_capacity();x++)
+    {
+     graphics.DrawRectangle(&pen4, 100 + (20*x), 560 - offset, 20, 30);
+    }
+    
 
     //winda
-    graphics.DrawRectangle(&pen2, 100, 500, 200, 90);
-    graphics.DrawRectangle(&pen3, 198, 1, 4, 498);
+    graphics.DrawRectangle(&pen2, 100, 500 - offset, 200, 90);
+    graphics.DrawRectangle(&pen3, 198, 1 - offset, 4, 498);
+    scale(hdc);
 }
-
+void repaintWindow(HWND hWnd, HDC& hdc, PAINTSTRUCT& ps)
+{
+    InvalidateRect(hWnd, NULL, TRUE); 
+    hdc = BeginPaint(hWnd, &ps);
+    OnPaint(hdc);
+    EndPaint(hWnd, &ps);
+}
 int APIENTRY wWinMain( HINSTANCE hInstance,
                       HINSTANCE hPrevInstance,
                       LPWSTR    lpCmdLine,
@@ -154,19 +321,11 @@ int APIENTRY wWinMain( HINSTANCE hInstance,
     GdiplusStartupInput gdiplusStartupInput;
     ULONG_PTR           gdiplusToken;
     GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
-    // TODO: W tym miejscu umieść kod.
-
-   /* Elevator lift;
-    bool works = 1;
-    */
-    
-    
-    // Inicjuj ciągi globalne
+   
     LoadString(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
     LoadString(hInstance, IDC_WINDAZGUI, szWindowClass, MAX_LOADSTRING);
     MyRegisterClass(hInstance);
 
-    // Wykonaj inicjowanie aplikacji:
     if (!InitInstance (hInstance, nCmdShow))
     {
         return FALSE;
@@ -175,7 +334,7 @@ int APIENTRY wWinMain( HINSTANCE hInstance,
     hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_WINDAZGUI));
     
 
-    // Główna pętla komunikatów:
+    
     while (GetMessage(&msg, nullptr, 0, 0))
     {
         if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
@@ -189,11 +348,6 @@ int APIENTRY wWinMain( HINSTANCE hInstance,
 }
 
 
-
-//
-//  FUNKCJA: MyRegisterClass()
-//
-//  PRZEZNACZENIE: Rejestruje klasę okna.
 //
 ATOM MyRegisterClass(HINSTANCE hInstance)
 {
@@ -216,20 +370,11 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
     return RegisterClassExW(&wcex);
 }
 
-//
-//   FUNKCJA: InitInstance(HINSTANCE, int)
-//
-//   PRZEZNACZENIE: Zapisuje dojście wystąpienia i tworzy okno główne
-//
-//   KOMENTARZE:
-//
-//        W tej funkcji dojście wystąpienia jest zapisywane w zmiennej globalnej i
-//        jest tworzone i wyświetlane okno główne programu.
-//
+
 BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
     HWND hWnd;
-   hInst = hInstance; // Przechowuj dojście wystąpienia w naszej zmiennej globalnej
+   hInst = hInstance; 
 
    hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
       CW_USEDEFAULT, 0, 800, 700, nullptr, nullptr, hInstance, nullptr);
@@ -353,16 +498,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    return TRUE;
 }
 
-//
-//  FUNKCJA: WndProc(HWND, UINT, WPARAM, LPARAM)
-//
-//  PRZEZNACZENIE: Przetwarza komunikaty dla okna głównego.
-//
-//  WM_COMMAND  - przetwarzaj menu aplikacji
-//  WM_PAINT    - Maluj okno główne
-//  WM_DESTROY  - opublikuj komunikat o wyjściu i wróć
-//
-//
+
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message)
@@ -383,68 +519,148 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 break;
 
             case ID_BUTTON_FLOOR1_TO2:
-                qpassengers.push_back(Human(1,2));
+                qpassengers.push_back(Human(1, 2));
+                if(!elevator.isitmoving())
+                serch_vector(qpassengers);
+                
+                SetTimer(hWnd, Timer1, 15, (TIMERPROC)NULL);
                 break;
             case ID_BUTTON_FLOOR1_TO3:
                 qpassengers.push_back(Human(1, 3));
+                if (!elevator.isitmoving())
+                serch_vector(qpassengers);
+                
+                SetTimer(hWnd, Timer1, 15, (TIMERPROC)NULL);
                 break;
             case ID_BUTTON_FLOOR1_TO4:
-                qpassengers.push_back(Human(1,4));
+                qpassengers.push_back(Human(1, 4));
+                if (!elevator.isitmoving())
+                serch_vector(qpassengers);
+                
+                SetTimer(hWnd, Timer1, 15, (TIMERPROC)NULL);
                 break;
             case ID_BUTTON_FLOOR1_TO5:
-                qpassengers.push_back(Human(1, 4));
+                qpassengers.push_back(Human(1, 5));
+                if (!elevator.isitmoving())
+                serch_vector(qpassengers);
+                
+                SetTimer(hWnd, Timer1, 15, (TIMERPROC)NULL);
                 break;
 
             case ID_BUTTON_FLOOR2_TO1:
                 qpassengers.push_back(Human(2, 1));
+                if (!elevator.isitmoving())
+                serch_vector(qpassengers);
+                
+                SetTimer(hWnd, Timer1, 15, (TIMERPROC)NULL);
                 break;
             case ID_BUTTON_FLOOR2_TO3:
                 qpassengers.push_back(Human(2, 3));
+                if (!elevator.isitmoving())
+                serch_vector(qpassengers);
+                
+                SetTimer(hWnd, Timer1, 15, (TIMERPROC)NULL);
                 break;
             case ID_BUTTON_FLOOR2_TO4:
                 qpassengers.push_back(Human(2, 4));
+                if (!elevator.isitmoving())
+                serch_vector(qpassengers);
+                
+                SetTimer(hWnd, Timer1, 15, (TIMERPROC)NULL);
                 break;
             case ID_BUTTON_FLOOR2_TO5:
                 qpassengers.push_back(Human(2, 5));
+                if (!elevator.isitmoving())
+                serch_vector(qpassengers);
+                
+                SetTimer(hWnd, Timer1, 15, (TIMERPROC)NULL);
                 break;
 
             case ID_BUTTON_FLOOR3_TO1:
                 qpassengers.push_back(Human(3, 1));
+                if (!elevator.isitmoving())
+                serch_vector(qpassengers);
+                
+                SetTimer(hWnd, Timer1, 15, (TIMERPROC)NULL);
                 break;
             case ID_BUTTON_FLOOR3_TO2:
                 qpassengers.push_back(Human(3, 2));
+                if (!elevator.isitmoving())
+                serch_vector(qpassengers);
+                
+                SetTimer(hWnd, Timer1, 15, (TIMERPROC)NULL);
                 break;
             case ID_BUTTON_FLOOR3_TO4:
                 qpassengers.push_back(Human(3, 4));
+                if (!elevator.isitmoving())
+                serch_vector(qpassengers);
+                
+                SetTimer(hWnd, Timer1, 15, (TIMERPROC)NULL);
                 break;
             case ID_BUTTON_FLOOR3_TO5:
                 qpassengers.push_back(Human(3, 5));
+                if (!elevator.isitmoving())
+                serch_vector(qpassengers);
+                
+                SetTimer(hWnd, Timer1, 15, (TIMERPROC)NULL);
                 break;
 
             case ID_BUTTON_FLOOR4_TO1:
                 qpassengers.push_back(Human(4, 1));
+                if (!elevator.isitmoving())
+                serch_vector(qpassengers);
+                
+                SetTimer(hWnd, Timer1, 15, (TIMERPROC)NULL);
                 break;
             case ID_BUTTON_FLOOR4_TO2:
                 qpassengers.push_back(Human(4, 2));
+                if (!elevator.isitmoving())
+                serch_vector(qpassengers);
+                
+                SetTimer(hWnd, Timer1, 15, (TIMERPROC)NULL);
                 break;
             case ID_BUTTON_FLOOR4_TO3:
                 qpassengers.push_back(Human(4, 3));
+                if (!elevator.isitmoving())
+                serch_vector(qpassengers);
+                
+                SetTimer(hWnd, Timer1, 15, (TIMERPROC)NULL);
                 break;
             case ID_BUTTON_FLOOR4_TO5:
                 qpassengers.push_back(Human(4, 5));
+                if (!elevator.isitmoving())
+                serch_vector(qpassengers);
+                
+                SetTimer(hWnd, Timer1, 15, (TIMERPROC)NULL);
                 break;
 
             case ID_BUTTON_FLOOR5_TO1:
                 qpassengers.push_back(Human(5, 1));
+                if (!elevator.isitmoving())
+                serch_vector(qpassengers);
+                
+                SetTimer(hWnd, Timer1, 15, (TIMERPROC)NULL);
                 break;
             case ID_BUTTON_FLOOR5_TO2:
                 qpassengers.push_back(Human(5, 2));
+                if (!elevator.isitmoving())
+                serch_vector(qpassengers);
+                
+                SetTimer(hWnd, Timer1, 15, (TIMERPROC)NULL);
                 break;
             case ID_BUTTON_FLOOR5_TO3:
                 qpassengers.push_back(Human(5, 3));
+                if (!elevator.isitmoving())
+                serch_vector(qpassengers);
+                
+                SetTimer(hWnd, Timer1, 15, (TIMERPROC)NULL);
                 break;
             case ID_BUTTON_FLOOR5_TO4:
                 qpassengers.push_back(Human(5, 4));
+                if (!elevator.isitmoving())
+                serch_vector(qpassengers);
+                
+                SetTimer(hWnd, Timer1, 15, (TIMERPROC)NULL);
                 break;
 
             default:
@@ -465,11 +681,63 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     case WM_DESTROY:
         PostQuitMessage(0);
         break;
+    case WM_TIMER: //do przepisania
+        switch (wParam) {
+        case Timer1:
+            if (qpassengers.size() != 0)
+            {
+                if (elevator.get_nextposition() != 0)
+                {
+                    if (elevator.get_curentposition() != elevator.get_nextposition());
+                    if (i != (elevator.get_nextposition() - elevator.get_curentposition()) * 120) { //wyznacza ilosc pikseli o jakie ma sie przemiescic do pietra startowego
+                        i = i + (elevator.get_nextposition() - elevator.get_curentposition()) * 2;
+                        offset = offset + (elevator.get_nextposition() - elevator.get_curentposition()) * 2;
+                        elevator.starte();
+                    }
+                    else {
+                        elevator.curentPositionEqual();
+                        
+                        arrive(qpassengers);
+                        
+                        beggin();
+                        Sleep(500);
+                        serch_vector(qpassengers);
+                        i = 0;
+                        if (qpassengers.empty()) {
+                            elevator.stope();
+                          
+                            //KillTimer(hWnd, Timer1);
+                        }
+                    }
+                }
+            }
+            else {
+                if (elevator.isitmoving() == false) {
+                    elevator.set_nextposition(1);
+                    timer = timer + 15;
+                    if (timer > 5000) {
+                        if (offset != 0) {
+                            offset = offset - 2;
+                        }
+                        else {
+                            elevator.curentPositionEqual();
+                            KillTimer(hWnd, Timer1);
+                        }
+                    }
+                }
+            }
+
+                
+            repaintWindow(hWnd, hdc, ps);
+            
+            break;
+        }
     default:
         return DefWindowProc(hWnd, message, wParam, lParam);
     }
     return 0;
 }
+
 
 // Procedura obsługi komunikatów dla okna informacji o programie.
 INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
