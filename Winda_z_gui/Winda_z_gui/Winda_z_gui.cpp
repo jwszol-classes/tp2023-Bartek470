@@ -224,7 +224,7 @@ void beggin()
     int qsize = qpassengers.size();
     for (int x=0; x < qsize; x++)
     {
-        if (qpassengers[x].get_isinside() == 0 and qpassengers[x].get_start() == elevator.get_curentposition() and elevator.get_capacity() < ELEVATOR_CAPACITY and elevator.get_load() < LIFTING_CAPACITY)
+        if (qpassengers[x].get_isinside() == 0 and qpassengers[x].get_start() == elevator.get_curentposition() and elevator.get_capacity() < ELEVATOR_CAPACITY and elevator.get_load() < LIFTING_CAPACITY-80)
         {
             qpassengers[x].set_isinside();
             elevator.add_capacity();
